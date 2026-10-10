@@ -11,7 +11,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.mobilebuild.nisw6b",
       "infoPlist": {
-        "NSCameraUsageDescription": "Use camera for gesture backup"
+        "NSCameraUsageDescription": "Take photos of custom hand signs to add to your library",
+        "NSPhotoLibraryUsageDescription": "Pick a reference photo for custom signs",
+        "NSLocalNetworkUsageDescription": "Connect to your ESP32 glove over Wi-Fi"
       }
     },
     "android": {
@@ -20,7 +22,16 @@
         "backgroundColor": "#000000"
       },
       "package": "com.emergent.mobilebuild.nisw6b",
-      "permissions": ["CAMERA", "BLUETOOTH_SCAN", "BLUETOOTH_CONNECT", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "BLUETOOTH_SCAN",
+        "BLUETOOTH_CONNECT",
+        "ACCESS_FINE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -45,6 +56,7 @@
       "expo-status-bar",
       "expo-audio",
       "expo-camera",
+      "expo-image-picker",
       "@sfourdrinier/react-native-ble-plx"
     ],
     "experiments": {

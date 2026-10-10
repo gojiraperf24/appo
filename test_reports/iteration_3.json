@@ -1,0 +1,40 @@
+{
+  "summary": "SignWave Connect session-3 backend + frontend testing. Backend: wrote /app/backend/tests/test_signwave_v3.py (13 tests, all passing after fix) covering (a) expanded gesture catalog — 88 seeded gestures with Fixed/Bike/Scuba/Alphabet categories, Alphabet A-Z, Bike classics (Follow me / Pull over / Fuel stop), Scuba essentials (Low on air / Share air / Danger); (b) POST /api/gestures with image_base64 uploads a real JPEG with features via run_in_threadpool to Emergent Object Storage and returns image_path 'signwave-connect/custom-gestures/<uuid>.jpg', GET /api/files/{path} returns stored bytes with image/* content-type; (c) POST /api/gestures without image_base64 still works; (d) invalid base64 → 400; (e) regression on quick-phrases, favorites, history, recognize-gesture (empty 400). Frontend (390x844 Expo web): verified (1) Live Translate secondary button now labelled 'Camera' (not Camera backup) and taps to /camera; (2) Connect tab Wi-Fi (ESP32) card renders URL input + Connect over Wi-Fi button, invalid URL ('999.999.999.999:81') produces visible error 'Failed to construct WebSocket: The URL is invalid.' via wifi.ts error path; (3) Demo Mode card now has BOTH 'Simulator' and 'Camera demo' buttons; 'Camera demo' deep-links to /camera?mode=demo; (4) Settings → Add custom gesture modal renders Take photo + Pick from library buttons, filling label+spoken and tapping Save sign POSTs to /api/gestures with device_id, modal dismisses, status 'Custom sign added' appears. Found and fixed one race-condition bug in Wi-Fi URL persistence — see rca_of_issue.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_signwave_v3.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "No backend changes needed. All 88 seeded gestures, Alphabet A-Z, Bike classics, Scuba essentials, image upload+retrieval, and invalid payload rejection all pass.",
+    "Main agent should review the small fix I landed in /app/frontend/app/(tabs)/connect.tsx — added a useEffect to sync local wifiInput state once the context's wifiUrl hydrates from AsyncStorage. Without it, the TextInput shows empty after reload even though the value is correctly persisted in localStorage.",
+    "Nice-to-have: show the stored custom-gesture image preview in the Signs tab card when gesture.image_path is set (currently backend returns image_path but the Signs grid does not render it)."
+  ],
+  "critical_code_review_comments": [
+    "server.py — /api/gestures correctly scopes Custom to device_id when provided; good. Base64 handling strips data-URI prefix, validates strictly, caps at 4MB, and routes to run_in_threadpool for the blocking requests PUT — safe for the event loop.",
+    "server.py — /api/files/{path:path} re-inits the storage key on 503 and 500 maps to 404 (FileNotFoundError). Good resilience.",
+    "wifi.ts — normaliseWifiUrl accepts bare host/port/ws/wss and defaults to :81; connect() has a 7s timeout with proper cleanup on reject/close. However, for truly invalid hostnames (e.g. '999.999.999.999:81') the browser throws synchronously in `new WebSocket(target)` — the try/catch catches it and surfaces the error, which worked correctly in testing.",
+    "connect.tsx — fixed race condition where `useState(wifiUrl || '')` captured the empty initial value before the context's boot effect hydrated wifiUrl from AsyncStorage. Added a useEffect(() => { if (wifiUrl && !wifiInput) setWifiInput(wifiUrl); }, [wifiUrl]).",
+    "settings.tsx — image picker uses `base64: true, quality: 0.5, aspect: [1,1]` which produces reasonable payload sizes for Emergent Object Storage. mediaTypes uses the new array form ['images'] (not deprecated MediaTypeOptions.Images). Good."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_signwave_v3.py",
+    "/app/frontend/app/(tabs)/connect.tsx",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% of session-3 flows pass after persistence fix"},
+  "seed_data_creation": "Backend upserts 88 gestures (26 Alphabet + 28 Fixed + 16 Bike + 18 Scuba) on first /api/gestures call. Tests also create a 'TEST_WithImage' custom gesture per run; cleanup is best-effort (DELETE /api/gestures not implemented).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_signwave_v3.py (session-3). The image-upload test uses a PIL-generated real JPEG (240x240) with grid lines + ellipse + rectangle + triangle so it has true features and passes the image_testing.md rules. Frontend testIDs added in session 3: wifi-url-input, wifi-connect-button, wifi-disconnect-button, demo-camera-button, custom-sign-label, custom-sign-spoken, custom-sign-description, custom-sign-camera, custom-sign-library, custom-sign-remove-image, custom-sign-cancel, custom-sign-save. The Wi-Fi connect error path in CI relies on the browser WebSocket constructor synchronously throwing for malformed hosts (e.g. '999.999.999.999:81' → 'Failed to construct WebSocket: The URL is invalid'). For any valid-looking but unreachable host (e.g. 192.168.1.50:81), expect the 7s timeout path.",
+  "rca_of_issue": "Bug: Wi-Fi URL did not appear in the Connect tab TextInput after reload, even though AsyncStorage/localStorage held the value correctly. Root cause: ConnectScreen initialises `const [wifiInput, setWifiInput] = useState(wifiUrl || '')`. On mount, the context's wifiUrl is still '' because its boot useEffect (which calls storage.getItem(WIFI_URL_KEY)) resolves asynchronously; by the time wifiUrl hydrates to the saved value, wifiInput is already stuck at ''. Reproduction: fill '10.0.0.77:81' in the input → reload → navigate back to Connect → input is empty. Mitigation: added `useEffect(() => { if (wifiUrl && !wifiInput) setWifiInput(wifiUrl); }, [wifiUrl])` so the local state syncs once the persisted value arrives. Verified post-fix: reload now restores '10.0.0.77:81'."
+}

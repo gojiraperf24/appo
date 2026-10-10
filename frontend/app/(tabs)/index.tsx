@@ -185,12 +185,12 @@ export default function LiveTranslate() {
             style={styles.alert}
             onPress={() => router.push("/(tabs)/connect")}
             accessibilityRole="button"
-            accessibilityLabel="Pair a Bluetooth glove or start demo mode"
+            accessibilityLabel="Pair a glove or start demo mode"
             testID="pair-glove-cta"
           >
             <Ionicons name="bluetooth-outline" size={20} color={colors.brandPrimary} />
             <Text style={styles.alertText}>
-              Pair your glove to receive signals — or try Demo Mode from the Connect tab.
+              Pair your glove over Bluetooth or Wi-Fi, or try Demo Mode from the Connect tab.
             </Text>
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
           </Pressable>
@@ -269,11 +269,11 @@ export default function LiveTranslate() {
               style={styles.secondary}
               onPress={() => router.push("/camera")}
               accessibilityRole="button"
-              accessibilityLabel="Open camera backup"
+              accessibilityLabel="Open camera"
               testID="open-camera-button"
             >
               <Ionicons name="camera-outline" size={19} color={colors.onSurface} />
-              <Text style={styles.secondaryText}>Camera backup</Text>
+              <Text style={styles.secondaryText}>Camera</Text>
             </Pressable>
           </View>
           {error ? <Text style={styles.error}>{error}</Text> : null}

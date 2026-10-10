@@ -24,13 +24,28 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type CustomGesturePayload = {
+  label: string;
+  spoken_text: string;
+  description?: string;
+  image_base64?: string;
+};
+
 export const api = {
-  getGestures: (category?: string) =>
-    request<Gesture[]>(
-      `/gestures${category && category !== "All" && category !== "Favorites" ? `?category=${encodeURIComponent(category)}` : ""}`,
-    ),
-  createGesture: (payload: Pick<Gesture, "label" | "spoken_text" | "description">) =>
-    request<Gesture>("/gestures", { method: "POST", body: JSON.stringify(payload) }),
+  getGestures: (category?: string, deviceId?: string) => {
+    const params = new URLSearchParams();
+    if (category && category !== "All" && category !== "Favorites") {
+      params.set("category", category);
+    }
+    if (deviceId) params.set("device_id", deviceId);
+    const qs = params.toString();
+    return request<Gesture[]>(`/gestures${qs ? `?${qs}` : ""}`);
+  },
+  createGesture: (payload: CustomGesturePayload, deviceId?: string) =>
+    request<Gesture>(`/gestures${deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : ""}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   getSettings: () => request<AppSettings>("/settings"),
   updateSettings: (settings: AppSettings) =>
     request<AppSettings>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
@@ -72,4 +87,6 @@ export const api = {
       { method: "DELETE" },
     ),
   absoluteUrl: (path: string) => `${backendUrl}${path}`,
+  fileUrl: (storagePath?: string | null) =>
+    storagePath ? `${backendUrl}/api/files/${storagePath.replace(/^\/+/, "")}` : null,
 };

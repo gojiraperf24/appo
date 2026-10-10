@@ -1,5 +1,4 @@
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
 import {
   createContext,
   useCallback,
@@ -10,12 +9,14 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
+import { Platform } from "react-native";
 import { api } from "./api";
 import { bleSimulator } from "./bluetooth.simulator";
+import { wifi } from "./wifi";
 import { storage } from "./utils/storage";
 import type { BluetoothState, ContextMode, HistoryItem } from "./types";
 
-type InputMode = "Bluetooth glove" | "Camera backup" | "Demo mode";
+type InputMode = "Bluetooth glove" | "Wi-Fi (ESP32)" | "Camera" | "Demo mode";
 
 type TranslationContextValue = {
   tokens: string[];
@@ -27,6 +28,8 @@ type TranslationContextValue = {
   history: HistoryItem[];
   favorites: Set<string>;
   demoActive: boolean;
+  wifiActive: boolean;
+  wifiUrl: string;
   setInputMode: (mode: InputMode) => void;
   setConnectionState: (state: BluetoothState) => void;
   setContextMode: (mode: ContextMode) => void;
@@ -35,6 +38,9 @@ type TranslationContextValue = {
   commitSentence: () => Promise<void>;
   startDemoMode: () => void;
   stopDemoMode: () => void;
+  connectWifi: (url: string) => Promise<void>;
+  disconnectWifi: () => void;
+  setWifiUrl: (url: string) => Promise<void>;
   toggleFavorite: (gestureId: string) => Promise<void>;
   refreshFavorites: () => Promise<void>;
   refreshHistory: () => Promise<void>;
@@ -45,6 +51,7 @@ const TranslationContext = createContext<TranslationContextValue | null>(null);
 
 const CONTEXT_KEY = "signwave.context_mode";
 const DEVICE_KEY = "signwave.device_id";
+const WIFI_URL_KEY = "signwave.wifi_url";
 
 function makeDeviceId(): string {
   const timePart = Date.now().toString(36);
@@ -61,9 +68,11 @@ export function TranslationProvider({ children }: PropsWithChildren) {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [demoActive, setDemoActive] = useState(false);
+  const [wifiActive, setWifiActive] = useState(false);
+  const [wifiUrl, setWifiUrlState] = useState<string>("");
   const demoUnsubscribe = useRef<(() => void) | null>(null);
+  const wifiUnsubscribe = useRef<(() => void) | null>(null);
 
-  // Boot: load persisted context mode + device id, then refresh favorites and history.
   useEffect(() => {
     (async () => {
       const savedMode = (await storage.getItem<ContextMode>(CONTEXT_KEY, "Everyday")) ?? "Everyday";
@@ -74,17 +83,21 @@ export function TranslationProvider({ children }: PropsWithChildren) {
         await storage.setItem(DEVICE_KEY, id);
       }
       setDeviceId(id);
+      const savedWifi = (await storage.getItem<string>(WIFI_URL_KEY, "")) ?? "";
+      setWifiUrlState(savedWifi);
       try {
         const [favs, hist] = await Promise.all([api.getFavorites(id), api.getHistory(id)]);
         setFavorites(new Set(favs));
         setHistory(hist);
       } catch {
-        // Backend might not be reachable yet — ignore silently; UI will retry.
+        // ignore boot errors
       }
     })();
     return () => {
       demoUnsubscribe.current?.();
+      wifiUnsubscribe.current?.();
       bleSimulator.stop();
+      wifi.disconnect();
     };
   }, []);
 
@@ -92,7 +105,7 @@ export function TranslationProvider({ children }: PropsWithChildren) {
     setContextModeState(mode);
     await storage.setItem(CONTEXT_KEY, mode);
     if (bleSimulator.isActive()) {
-      bleSimulator.start(mode); // restart with new vocab
+      bleSimulator.start(mode);
     }
   }, []);
 
@@ -125,7 +138,7 @@ export function TranslationProvider({ children }: PropsWithChildren) {
       const item = await api.addHistory(deviceId, text, contextMode);
       setHistory((current) => [item, ...current].slice(0, 20));
     } catch {
-      // Keep spoken flow working even if history save fails.
+      // ignore
     }
   }, [tokens, deviceId, contextMode]);
 
@@ -166,7 +179,6 @@ export function TranslationProvider({ children }: PropsWithChildren) {
           await api.addFavorite(deviceId, gestureId);
         }
       } catch {
-        // Roll back on failure
         setFavorites(favorites);
       }
     },
@@ -191,6 +203,35 @@ export function TranslationProvider({ children }: PropsWithChildren) {
     setInputMode("Bluetooth glove");
   }, []);
 
+  const setWifiUrl = useCallback(async (url: string) => {
+    setWifiUrlState(url);
+    await storage.setItem(WIFI_URL_KEY, url);
+  }, []);
+
+  const connectWifi = useCallback(
+    async (url: string) => {
+      await setWifiUrl(url);
+      await wifi.connect(url);
+      wifiUnsubscribe.current?.();
+      wifiUnsubscribe.current = wifi.subscribe(addToken);
+      setWifiActive(true);
+      setInputMode("Wi-Fi (ESP32)");
+      setConnectionState("wifi");
+    },
+    [addToken, setWifiUrl],
+  );
+
+  const disconnectWifi = useCallback(() => {
+    wifi.disconnect();
+    wifiUnsubscribe.current?.();
+    wifiUnsubscribe.current = null;
+    setWifiActive(false);
+    if (!demoActive) {
+      setConnectionState("ready");
+      setInputMode("Bluetooth glove");
+    }
+  }, [demoActive]);
+
   const value = useMemo<TranslationContextValue>(
     () => ({
       tokens,
@@ -202,6 +243,8 @@ export function TranslationProvider({ children }: PropsWithChildren) {
       history,
       favorites,
       demoActive,
+      wifiActive,
+      wifiUrl,
       setInputMode,
       setConnectionState,
       setContextMode,
@@ -210,6 +253,9 @@ export function TranslationProvider({ children }: PropsWithChildren) {
       commitSentence,
       startDemoMode,
       stopDemoMode,
+      connectWifi,
+      disconnectWifi,
+      setWifiUrl,
       toggleFavorite,
       refreshFavorites,
       refreshHistory,
@@ -224,12 +270,17 @@ export function TranslationProvider({ children }: PropsWithChildren) {
       history,
       favorites,
       demoActive,
+      wifiActive,
+      wifiUrl,
       addToken,
       clearSentence,
       commitSentence,
       setContextMode,
       startDemoMode,
       stopDemoMode,
+      connectWifi,
+      disconnectWifi,
+      setWifiUrl,
       toggleFavorite,
       refreshFavorites,
       refreshHistory,

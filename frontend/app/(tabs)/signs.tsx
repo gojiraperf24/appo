@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ const useStyles = makeStyles((colors) => ({
   resultCount: { color: colors.muted, fontSize: 13, fontWeight: "700" },
   card: { backgroundColor: colors.surfaceSecondary, borderRadius: 18, borderWidth: 1, borderColor: colors.border, padding: 14, flexDirection: "row", gap: 12, alignItems: "center" },
   icon: { width: 44, height: 44, borderRadius: 14, backgroundColor: colors.brandTertiary, alignItems: "center", justifyContent: "center" },
+  thumbnail: { width: 56, height: 56, borderRadius: 14, backgroundColor: colors.surfaceTertiary },
   cardBody: { flex: 1, gap: 3 },
   cardTitle: { color: colors.onSurface, fontSize: 15, fontWeight: "800" },
   cardMeaning: { color: colors.onSurface, fontSize: 13, fontWeight: "600" },
@@ -50,7 +52,7 @@ export default function SignsScreen() {
   const insets = useSafeAreaInsets();
   const styles = useStyles();
   const { colors } = useTheme();
-  const { contextMode, setContextMode, favorites, toggleFavorite, refreshFavorites } = useTranslation();
+  const { contextMode, setContextMode, favorites, toggleFavorite, refreshFavorites, deviceId } = useTranslation();
   const [category, setCategory] = useState<GestureCategory>("All");
   const [query, setQuery] = useState("");
   const [gestures, setGestures] = useState<Gesture[]>([]);
@@ -61,7 +63,10 @@ export default function SignsScreen() {
     setLoading(true);
     setError("");
     try {
-      const list = category === "Favorites" ? await api.getGestures("All") : await api.getGestures(category);
+      const list =
+        category === "Favorites"
+          ? await api.getGestures("All", deviceId)
+          : await api.getGestures(category, deviceId);
       setGestures(list);
       await refreshFavorites();
     } catch (loadError) {
@@ -172,15 +177,20 @@ export default function SignsScreen() {
             filtered.map((gesture) => {
               const override = gesture.context_overrides?.[contextMode];
               const starred = favorites.has(gesture.id);
+              const imageUrl = api.fileUrl(gesture.image_path);
               return (
                 <View style={styles.card} key={gesture.id} testID={`sign-card-${gesture.id}`}>
-                  <View style={styles.icon}>
-                    <Ionicons
-                      name={gesture.icon as keyof typeof Ionicons.glyphMap}
-                      size={22}
-                      color={colors.brandPrimary}
-                    />
-                  </View>
+                  {imageUrl ? (
+                    <Image source={{ uri: imageUrl }} style={styles.thumbnail} contentFit="cover" transition={200} />
+                  ) : (
+                    <View style={styles.icon}>
+                      <Ionicons
+                        name={gesture.icon as keyof typeof Ionicons.glyphMap}
+                        size={22}
+                        color={colors.brandPrimary}
+                      />
+                    </View>
+                  )}
                   <View style={styles.cardBody}>
                     <Text style={styles.category}>
                       {gesture.category} · {gesture.source}

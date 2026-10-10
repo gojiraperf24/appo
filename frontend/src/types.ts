@@ -11,6 +11,7 @@ export type Gesture = {
   icon: string;
   source: string;
   context_overrides?: Record<string, string>;
+  image_path?: string | null;
 };
 
 export type AppSettings = {
@@ -25,7 +26,14 @@ export type BluetoothDevice = {
   rssi?: number | null;
 };
 
-export type BluetoothState = "unavailable" | "scanning" | "ready" | "connected" | "error" | "demo";
+export type BluetoothState =
+  | "unavailable"
+  | "scanning"
+  | "ready"
+  | "connected"
+  | "error"
+  | "demo"
+  | "wifi";
 
 export type QuickPhrase = {
   id: string;
@@ -47,3 +55,5 @@ export type RecognizeResponse = {
   spoken_text: string;
   confidence: "high" | "medium" | "low" | "none";
 };
+
+export type TransportKind = "Bluetooth" | "Wi-Fi" | "Demo" | "Camera";
