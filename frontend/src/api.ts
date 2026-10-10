@@ -1,5 +1,12 @@
 import Constants from "expo-constants";
-import type { AppSettings, Gesture } from "./types";
+import type {
+  AppSettings,
+  ContextMode,
+  Gesture,
+  HistoryItem,
+  QuickPhrase,
+  RecognizeResponse,
+} from "./types";
 
 const backendUrl = String(
   Constants.expoConfig?.extra?.backendUrl ?? process.env.EXPO_PUBLIC_BACKEND_URL ?? "",
@@ -18,11 +25,51 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  getGestures: (category?: string) => request<Gesture[]>(`/gestures${category && category !== "All" ? `?category=${encodeURIComponent(category)}` : ""}`),
+  getGestures: (category?: string) =>
+    request<Gesture[]>(
+      `/gestures${category && category !== "All" && category !== "Favorites" ? `?category=${encodeURIComponent(category)}` : ""}`,
+    ),
   createGesture: (payload: Pick<Gesture, "label" | "spoken_text" | "description">) =>
     request<Gesture>("/gestures", { method: "POST", body: JSON.stringify(payload) }),
   getSettings: () => request<AppSettings>("/settings"),
-  updateSettings: (settings: AppSettings) => request<AppSettings>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
-  speak: (text: string, speed: number) => request<{ audio_url: string; model: string }>("/speak", { method: "POST", body: JSON.stringify({ text, speed }) }),
+  updateSettings: (settings: AppSettings) =>
+    request<AppSettings>("/settings", { method: "PUT", body: JSON.stringify(settings) }),
+  speak: (text: string, speed: number) =>
+    request<{ audio_url: string; model: string }>("/speak", {
+      method: "POST",
+      body: JSON.stringify({ text, speed }),
+    }),
+  recognizeGesture: (image_base64: string, context_mode: ContextMode, vocabulary: string[]) =>
+    request<RecognizeResponse>("/recognize-gesture", {
+      method: "POST",
+      body: JSON.stringify({ image_base64, context_mode, vocabulary }),
+    }),
+  getQuickPhrases: (context_mode?: ContextMode) =>
+    request<QuickPhrase[]>(
+      `/quick-phrases${context_mode ? `?context_mode=${encodeURIComponent(context_mode)}` : ""}`,
+    ),
+  getHistory: (device_id: string) =>
+    request<HistoryItem[]>(`/history?device_id=${encodeURIComponent(device_id)}`),
+  addHistory: (device_id: string, sentence: string, context_mode: ContextMode) =>
+    request<HistoryItem>("/history", {
+      method: "POST",
+      body: JSON.stringify({ device_id, sentence, context_mode }),
+    }),
+  clearHistory: (device_id: string) =>
+    request<{ deleted: number }>(`/history?device_id=${encodeURIComponent(device_id)}`, {
+      method: "DELETE",
+    }),
+  getFavorites: (device_id: string) =>
+    request<string[]>(`/favorites?device_id=${encodeURIComponent(device_id)}`),
+  addFavorite: (device_id: string, gesture_id: string) =>
+    request<{ ok: boolean }>("/favorites", {
+      method: "POST",
+      body: JSON.stringify({ device_id, gesture_id }),
+    }),
+  removeFavorite: (device_id: string, gesture_id: string) =>
+    request<{ ok: boolean }>(
+      `/favorites?device_id=${encodeURIComponent(device_id)}&gesture_id=${encodeURIComponent(gesture_id)}`,
+      { method: "DELETE" },
+    ),
   absoluteUrl: (path: string) => `${backendUrl}${path}`,
 };

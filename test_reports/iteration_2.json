@@ -1,0 +1,46 @@
+{
+  "summary": "SignWave Connect session-2 backend + frontend regression. Backend: wrote /app/backend/tests/test_signwave_v2.py (10 tests, all passing). Covers gestures + context_overrides on Thumb up/OK/Help, quick-phrases count & Scuba filter, favorites POST/GET/DELETE round-trip, history POST/GET/DELETE round-trip + empty-sentence 400, recognize-gesture (empty payload 400 + textured non-hand JPEG classified as 'none'), speak regression. Frontend: Playwright-walked Live Translate, Signs, Connect, Camera at 390x844. Verified context chips (Everyday/Riding/Scuba) switch & persist across reload via AsyncStorage; quick-phrase chips add text and enable Speak Aloud; Thumb-up card shows 'Ascend, go up' override + 'Means something different in Scuba' when context=Scuba; Favorites filter empty state renders and star toggle persists via POST /api/favorites and reappears in Favorites filter; Connect-tab Demo Mode button flips the status pill to 'Demo stream · live'; Camera route renders permission UI with 'Allow camera access' button. Fixed one bug: `expo-haptics` default-import was undefined and emitted a web PageError on every haptic call — changed to `import * as Haptics` with `Platform.OS !== 'web'` guard in /app/frontend/src/translation-context.tsx; no PageErrors on retest.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "expo-haptics usage",
+        "issue": "Default import of expo-haptics is not a module object; `Haptics.selectionAsync` was undefined and threw an uncaught PageError on web every time a quick-phrase chip, context chip, demo-mode toggle, or BLE token was pressed. Fixed in /app/frontend/src/translation-context.tsx:1,107 by switching to `import * as Haptics` + Platform.OS web guard. Reference: /app/frontend/src/translation-context.tsx:1."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_signwave_v2.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/ui_initial/translate_scuba.jpeg",
+    "/app/test_reports/ui_initial/signs_favs.jpeg",
+    "/app/test_reports/ui_initial/camera.jpeg"
+  ],
+  "action_items": [
+    "No action required for backend — all 10 endpoints behave per spec, including vision model negative case.",
+    "Haptics regression already patched; main agent should review the Platform.OS guard and extend the same pattern if haptics are added elsewhere.",
+    "Optional UX: STEP14 showed Demo-mode tokens had not yet streamed into the sentence by the time the user returned to the Translate tab (status pill was 'Demo stream · live' but sentence still showed placeholder). Likely just timing (first token ~2–3s cadence); consider seeding one token immediately when demo starts so the user gets instant feedback."
+  ],
+  "critical_code_review_comments": [
+    "server.py — recognize-gesture endpoint correctly strips data-URI prefix, snaps labels to vocabulary case-insensitively, and maps context_overrides via gestures collection. Good.",
+    "server.py — favorites/history use device_id as a plain query param (no auth). Acceptable for anonymous-device model but note multi-tenant isolation relies entirely on client-supplied id.",
+    "translation-context.tsx — Haptics default import bug (now fixed). Verify no other files rely on default imports of starred-export Expo modules."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_signwave_v2.py",
+    "/app/frontend/src/translation-context.tsx",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% of flows exercised passed"},
+  "seed_data_creation": "Backend seeds 20 gestures (upsert) + 12 quick phrases on first request; test suite creates and self-cleans TEST_* favorites and history rows per device_id.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live in /app/backend/tests/test_signwave_v2.py and the older /app/backend/tests/test_signwave_api.py. Run with EXPO_PUBLIC_BACKEND_URL from /app/frontend/.env. Vision test uses a PIL-generated textured JPEG (features but not a hand) and expects label='none'. If the gpt-5.4-mini vision model changes behavior, update the assertion in TestRecognizeGesture.test_recognize_non_hand_image_returns_none. Frontend testIDs to rely on: context-chip-{everyday|riding|scuba}, signs-context-{...}, signs-filter-{favorites|all|...}, sign-card-{id}, favorite-{id}, quick-phrase-{id}, live-sentence, speak-aloud-button, clear-sentence-button, open-camera-button, demo-mode-button.",
+  "rca_of_issue": "Only one bug surfaced: Haptics default-import on web. Root cause — `expo-haptics` exports named members only (no default export); the default import resolved to `undefined`, so `Haptics.selectionAsync()` threw `Cannot read properties of undefined (reading 'selectionAsync')` on every user interaction that called provider.handleToken(). Reproduction: tap any quick-phrase chip while running on web. Mitigation: switched to namespace import `import * as Haptics from 'expo-haptics'` and gated the call with `if (Platform.OS !== 'web')`. Verified via Playwright reload — no more PageError after fix."
+}
