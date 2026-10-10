@@ -1,0 +1,153 @@
+{
+  "app_name": "SignWave Connect",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "An accessible, calm, high-contrast communication assistant translating sign language gestures into spoken voice and live readable text.",
+  "color": {
+    "surface": "#F9F8F6",
+    "onSurface": "#1C1C1E",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1C1C1E",
+    "surfaceTertiary": "#EFEEEA",
+    "onSurfaceTertiary": "#3A3A3C",
+    "surfaceInverse": "#1C1C1E",
+    "onSurfaceInverse": "#F9F8F6",
+    "brand": "#3B7A57",
+    "brandPrimary": "#3B7A57",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#52796F",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#E2ECE9",
+    "onBrandTertiary": "#2F4F4F",
+    "success": "#2D6A4F",
+    "onSuccess": "#FFFFFF",
+    "warning": "#C86D39",
+    "onWarning": "#FFFFFF",
+    "error": "#B83B27",
+    "onError": "#FFFFFF",
+    "info": "#3A6073",
+    "onInfo": "#FFFFFF",
+    "border": "#DCDAD4",
+    "borderStrong": "#8C8983",
+    "divider": "#E8E6E1",
+    "muted": "#706E69",
+    "onBrand": "#FFFFFF"
+  },
+  "typography": {
+    "displayFontFamily": "SpaceGrotesk_500Medium",
+    "textFontFamily": "Inter_400Regular",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous iOS spacing rhythm with clear grouping, padded containers, and comfortable touch targets ≥ 44pt.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use subtle blur on sticky bottom translation bar and header",
+      "Apply translucent tinted base for foreground text readability"
+    ],
+    "dont's": [
+      "Never blur body text regions or form fields",
+      "Avoid low contrast text over blurred hardware status"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "LiveTranslate",
+      "purpose": "Primary live communication hub showing real-time translated tokens, sentence assembly, speech playback, and input source toggle.",
+      "states": {
+        "loading": "Connecting to Bluetooth hardware sensor...",
+        "empty": "Awaiting gesture signals. Raise hand or perform sign...",
+        "error": "Bluetooth connection lost. Tap to reconnect or switch to Camera Fallback."
+      },
+      "layout": "Sticky top status pill for hardware/camera mode, giant high-contrast sentence display container, real-time word token ticker, sticky bottom action bar with Speak Aloud, Clear, and Input Mode switch."
+    },
+    {
+      "name": "HardwarePair",
+      "purpose": "Manage Bluetooth glove/sensor hardware connection with clear scanning, connected, and troubleshooting states.",
+      "states": {
+        "loading": "Scanning for nearby gesture gloves...",
+        "empty": "No Bluetooth hardware detected. Make sure device is powered on.",
+        "error": "Pairing failed. Please check device battery and try again."
+      },
+      "layout": "Header with search refresh, list of discovered peripheral cards with signal strength indicator, manual connect button, and troubleshooting tips."
+    },
+    {
+      "name": "CameraFallback",
+      "purpose": "Provides backup computer-vision hand sign recognition using front or back camera with manual switching.",
+      "states": {
+        "loading": "Initializing camera vision stream...",
+        "empty": "Position hand clearly within the camera frame.",
+        "error": "Camera permission denied. Enable access in settings."
+      },
+      "layout": "Full viewport camera preview with grid overlay, front/back switch button at top right, live recognized sign tag floating on screen."
+    },
+    {
+      "name": "GestureDictionary",
+      "purpose": "Browse fixed signs, alphabet signs, scuba diving, bike riding, and customized gestures.",
+      "states": {
+        "loading": "Loading sign library...",
+        "empty": "No signs found matching your search.",
+        "error": "Failed to load gesture library. Tap to retry."
+      },
+      "layout": "Search bar at top, category pill filter row (All, Alphabet, Scuba, Bike, Custom), vertical list of gesture cards with visual icon representation and translation text."
+    },
+    {
+      "name": "Settings",
+      "purpose": "Configure text-to-speech voice speed, auto-speak toggle, haptic feedback, and custom gesture definitions.",
+      "states": {
+        "loading": "Loading settings...",
+        "empty": "No settings available.",
+        "error": "Failed to save settings."
+      },
+      "layout": "Grouped iOS-style settings list with toggles for auto-speak, voice rate slider, haptic feedback, and 'Add Custom Gesture' modal trigger."
+    }
+  ],
+  "images": {
+    "hero_banner": {
+      "url": "https://images.unsplash.com/photo-1596920566724-6ae949b77ce7",
+      "alt": "Minimalist hand communication scene"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Ensure strict adherence to iOS-Native Clean personality with warm botanical accents (#3B7A57) and high-contrast typography.",
+    "The LiveTranslate screen must feature a sticky bottom translation bar with instant TTS playback and sentence clearing.",
+    "Implement robust Bluetooth state machine and camera fallback switcher with real-time feedback.",
+    "Every interactive element must have hitSlop and clear accessibility labels.",
+    "Zero tolerance for emoji in system UI or banned color families (indigo/violet/navy/purple)."
+  ]
+}
