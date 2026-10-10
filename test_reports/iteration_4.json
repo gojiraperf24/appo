@@ -1,0 +1,27 @@
+{
+  "summary": "Frontend-only verification of the Connect/Bluetooth tab bug fix. Connect tab now opens cleanly on the Expo web preview with all three sections (Wi-Fi, Demo Mode, Bluetooth) rendering, all testIDs present/interactive, and no TurboModule/BlePlx crash. Static review of /app/frontend/src/bluetooth.native.ts confirms the eager top-level import of @sfourdrinier/react-native-ble-plx has been removed and replaced with an Expo Go-gated require() inside try/catch using Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient'. The exported bluetooth.scan/connect/subscribe keep working on dev/prod builds (isSupported = !isExpoGo && !!manager). bluetooth.isExpoGo is correctly consumed by connect.tsx to show the 'Bluetooth needs a development build...' empty-state copy on Expo Go, and ensureManager() throws the required friendly 'Bluetooth isn\\'t available in Expo Go...' message that connect.tsx surfaces through bleError. All other tabs (Translate, Signs, Settings) render without regression. No BlePlx or 'missing the required default export' errors in Metro logs after the latest expo restart. No code changes were required.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "No action needed. Fix is correct and verified. Optional: when a real Expo Go client reconnects, re-check Metro logs to confirm 'Android Bundled' happens without the old BlePlx TurboModule error and without the 'Route (tabs)/connect.tsx is missing the required default export' warning (that warning was a side-effect of the eager-import crash and should now be gone)."
+  ],
+  "critical_code_review_comments": [
+    "bluetooth.native.ts: isExpoGo detection and try/catch require() are correctly scoped so dev builds still instantiate BleManager; ensureManager() correctly differentiates between Expo Go and generic load failures.",
+    "connect.tsx: empty-state branch properly uses bluetooth.isExpoGo first, then bluetooth.isSupported — matches the three runtimes (Expo Go / dev build / web).",
+    "bluetooth.ts stub re-exports from bluetooth.web; Metro's platform resolver picks .native.ts on iOS/Android and .web.ts on web — correct.",
+    "Minor nit (not blocking): disconnect() guards on `manager` so it is safe in Expo Go. OK."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only run)", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "If asked to re-verify, open /connect in the Expo web preview and confirm the three cards render + scan/wifi/demo testIDs are tappable; verify logs /var/log/supervisor/expo.out.log have no BlePlx or 'missing the required default export' after the most recent expo restart. For a true Expo Go verification, scan the QR with Expo Go on a device and confirm the Connect tab opens with 'Bluetooth needs a development build. In Expo Go, use Wi-Fi, Demo Mode, or the Camera instead.' and that tapping 'Scan for gloves' surfaces 'Bluetooth isn\\'t available in Expo Go...' via bleError instead of a red screen.",
+  "rca_of_issue": "RCA: @sfourdrinier/react-native-ble-plx registers a TurboModule ('BlePlx') via NativeModules that only exists in a custom native binary. Expo Go ships a fixed JS runtime without this module. The previous bluetooth.native.ts had `import { BleManager } from '@sfourdrinier/react-native-ble-plx'` at module top-level, so the moment Metro resolved connect.tsx (which imports from '@/src/bluetooth' => bluetooth.native.ts on native), TurboModuleRegistry.getEnforcing('BlePlx') executed at module evaluation and threw. React swallowed the module, which also made Expo Router warn 'Route (tabs)/connect.tsx is missing the required default export' (connect.tsx\\'s default export never got registered because its dependency failed to evaluate). Fix: lazy, gated loading in bluetooth.native.ts — detect Expo Go via expo-constants, skip the require(), and keep a friendly error path through ensureManager(). Verified: web preview Connect tab renders cleanly, all interactive testIDs work, other tabs unaffected."
+}

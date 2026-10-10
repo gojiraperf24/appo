@@ -288,7 +288,9 @@ export default function ConnectScreen() {
               <Ionicons name="radio-outline" size={28} color={colors.muted} />
               <Text style={styles.emptyText}>{scanning ? "Looking for a glove…" : "No glove connected yet"}</Text>
               <Text style={styles.emptySubtext}>
-                {bluetooth.isSupported
+                {bluetooth.isExpoGo
+                  ? "Bluetooth needs a development build. In Expo Go, use Wi-Fi, Demo Mode, or the Camera instead."
+                  : bluetooth.isSupported
                   ? "Tap scan when your glove is powered on."
                   : "Pairing is available from a mobile device, not this web preview."}
               </Text>
